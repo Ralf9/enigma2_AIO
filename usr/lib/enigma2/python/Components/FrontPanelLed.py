@@ -1,5 +1,5 @@
 from enigma import iRecordableService
-from Components.config import config, ConfigSlider, ConfigSelection, ConfigSubsection
+from Components.config import config, ConfigSlider, ConfigSelection, ConfigSubsection, ConfigYesNo
 from Tools.Log import Log
 from Tools.Directories import fileExists
 
@@ -20,15 +20,19 @@ colors = [
 	("0x9900FF", _("purple")),
 	("0xFF0066", _("pink")),
 	("0xFFFFFF", _("white")),
+	("0x000000", _("black")),
 ]
 # running
 config.fp.led.default_color = ConfigSelection(colors, default="0xFFFFFF")
-config.fp.led.default_brightness = ConfigSlider(default=0xff, increment=25, limits=(0,0xff))
+config.fp.led.default_brightness = ConfigSlider(default=0xc8, increment=5, limits=(0,0xff))
 # standby
 config.fp.led.standby_color = ConfigSelection(colors, default="0xFFFFFF")
-config.fp.led.standby_brightness = ConfigSlider(default=0x08, increment=8, limits=(0,0xff))
+config.fp.led.standby_brightness = ConfigSlider(default=0x10, increment=5, limits=(0,0xff))
 # shutdown
 config.fp.led.shutdown_color = ConfigSelection(colors, default="0xFF5500")
+#record
+config.fp.led.record_color = ConfigSelection(colors, default="0xFFFFFF")
+config.fp.led.record_blink = ConfigYesNo(default=True)
 
 frontPanelLed = None
 
@@ -51,6 +55,7 @@ class FrontPanelLed(object):
 		assert(not FrontPanelLed.instance)
 		FrontPanelLed.instance = self
 		self._session = None
+		FrontPanelLed.setBrightness(config.fp.led.default_brightness.default)
 		self.default()
 		config.misc.standbyCounter.addNotifier(self._onStandby, initial_call = False)
 		config.fp.led.default_color.addNotifier(self._onDefaultChanged, initial_call=False)
@@ -137,8 +142,10 @@ class FrontPanelLed(object):
 
 	@staticmethod
 	def recording():
-		FrontPanelLed.setFade()
-		FrontPanelLed.setBlink()
+		FrontPanelLed.setColor(int(config.fp.led.record_color.value, 0))
+		if config.fp.led.record_blink.value:
+			FrontPanelLed.setFade()
+			FrontPanelLed.setBlink()
 
 	@staticmethod
 	def stopRecording():

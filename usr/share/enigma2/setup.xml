@@ -75,6 +75,7 @@
 			<item level="1" text="Advanced" />
 				<item level="1" text="Show positioner movement">config.usage.showdish</item>
 				<item level="2" text="Alternative services tuner priority">config.usage.alternatives_priority</item>
+				<item level="2" text="Transponder Time">config.misc.useTransponderTime</item>
 			<item level="1" text = "Streaming" />
 				<item level="1" text="Maximum stream resolution">config.usage.max_stream_resolution</item>
 				<item level="1" text="TS Streaming Buffer (ms)">config.usage.ts_streaming_buffer</item>
@@ -106,6 +107,8 @@
 			<item level="0" text="Idle Color">config.fp.led.standby_color</item>
 			<item level="0" text="Idle Brightness">config.fp.led.standby_brightness</item>
 			<item level="0" text="Shutdown Color">config.fp.led.shutdown_color</item>
+			<item level="0" text="Record Color">config.fp.led.record_color</item>
+			<item level="0" text="Record blinking">config.fp.led.record_blink</item>
 		</setup>
 		<setup key="satconfig" title="Sat / Dish Setup">
 			<item text="Tuner Slot">config.sat.tunerslot</item>
