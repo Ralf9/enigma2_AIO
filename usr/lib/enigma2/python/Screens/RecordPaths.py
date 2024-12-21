@@ -34,6 +34,9 @@ class RecordPathsSettings(Screen,ConfigListScreen):
 
 	def checkReadWriteDir(self, configele):
 		print("checkReadWrite: ", configele.value)
+		if configele is self.allowed_entry[1]:
+			# prevent crash on Recording allowed, as this is no directory setting
+			return True
 		if configele.value in [x[0] for x in self.styles] or configele.value in [x[0] for x in self.storage_styles] or fileExists(configele.value, "w"):
 			configele.last_value = configele.value
 			return True
@@ -117,6 +120,8 @@ class RecordPathsSettings(Screen,ConfigListScreen):
 		self.timeshift_dirname.last_value = self.timeshift_dirname.value
 
 		self.list = []
+		self.allowed_entry = getConfigListEntry(_("Recordings"), config.misc.recording_allowed)
+		self.list.append(self.allowed_entry)
 		self.device_entry = getConfigListEntry(_("Default storage device"), self.default_device)
 		self.list.append(self.device_entry)
 		if config.usage.setup_level.index >= 2:
@@ -209,8 +214,10 @@ class RecordPathsSettings(Screen,ConfigListScreen):
 
 	def save(self):
 		currentry = self["config"].getCurrent()
+		print(currentry)
 		defaultChanged = None
 		if self.checkReadWriteDir(currentry[1]):
+			config.misc.recording_allowed.save()
 			config.usage.default_path.value = self.default_dirname.value
 			config.usage.timer_path.value = self.timer_dirname.value
 			config.usage.instantrec_path.value = self.instantrec_dirname.value
