@@ -65,10 +65,10 @@ def FinalInitUsageConfig():
 	inactivity_shutdown_choices = [ ("never", _("disabled")) ]
 	for i in range(1,6):
 		inactivity_shutdown_choices.extend([("%d" % i, ngettext("%(num)d hour", "%(num)d hours",i) % {"num" : i})])
-	config.usage.inactivity_shutdown = ConfigSelection(default = "3", choices = inactivity_shutdown_choices)
+	config.usage.inactivity_shutdown = ConfigSelection(default = "never", choices = inactivity_shutdown_choices)
 	config.usage.inactivity_shutdown_initialized = ConfigYesNo(default = False)
 	config.usage.showdish = ConfigYesNo(default = True)
-	config.usage.multibouquet = ConfigYesNo(default = False)
+	config.usage.multibouquet = ConfigYesNo(default = True)
 	config.usage.multiepg_ask_bouquet = ConfigYesNo(default = False)
 
 	config.usage.quickzap_bouquet_change = ConfigYesNo(default = False)
