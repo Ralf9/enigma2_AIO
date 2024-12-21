@@ -191,7 +191,7 @@ class Harddisk:
 			return _("DVD Drive")
 
 		for physdevprefix, pdescription in DEVICEDB.get(HardwareInfo().device_name,{}).items():
-			#print "bus_description:",phys, physdevprefix, pdescription
+			#print("bus_description:",phys, physdevprefix, pdescription)
 			if phys.startswith(physdevprefix):
 				return pdescription
 
@@ -202,6 +202,8 @@ class Harddisk:
 			return "USB"
 		if 'sdhci' in self.__data.get('ID_PATH', ''):
 			return "SDHC"
+		if '.sd' in self.__data.get('ID_PATH', ''):
+			return "SD Card"
 		return "External Storage"
 
 	def capacity(self):
@@ -210,6 +212,11 @@ class Harddisk:
 	def model(self, model_only = False, vendor_only = False):
 		vendor = self.__data.get('ID_VENDOR_ENC', '').decode('string_escape').strip()
 		model = self.__data.get('ID_MODEL_ENC', '').decode('string_escape').strip()
+		if not vendor and not model and self.device == "mmcblk1":
+			devname = self.__data.get('ID_NAME', '').decode('string_escape').strip()
+			if devname:
+				return "SD Card" + " " + devname
+			return "SD Card"
 		if vendor_only or not model:
 			return vendor
 		if model_only or not vendor:
@@ -844,7 +851,8 @@ class HarddiskManager:
 			Log.i("This is part of the rootfs blockdevice - blacklisting!")
 			return True
 		major = int(data.get('MAJOR', '0'))
-		if major == 179 and int(data.get("removable", 0)) == 1:
+		minor = int(data.get('MINOR', '0'))
+		if major == 179 and (int(data.get("removable", 0)) == 1 or minor > 127):
 			Log.i("Blockdevice {} is removable and not blacklisted!".format(blkdev.name()))
 			return False
 		return name in ['zram'] or major in (1, 7, 9, 31, 179) # ram, loop, md, mtdblock, mmcblk
@@ -1259,6 +1267,9 @@ class HarddiskManager:
 						val += "Part" + str(partNum)
 				print("suggestDeviceMountpath for uuid: '%s' -> '%s'" %(uuid,val))
 				return "/media/" + val
+			else:
+				# probably SD card
+				return "/media/sd"
 		else:
 			mountpath = ""
 			uuid_cfg = config.storage.get(uuid, None)
@@ -1298,6 +1309,7 @@ class HarddiskManager:
 		old_cur_default_enabled = old_new_default_enabled = False
 
 		if action == "mount_default":
+			print("mount default")
 			if currentDefaultStorageUUID != "<undefined>" and currentDefaultStorageUUID != uuid:
 				cur_default = self.getDefaultStorageDevicebyUUID(currentDefaultStorageUUID)
 			new_default = self.getPartitionbyUUID(uuid)
@@ -1354,12 +1366,17 @@ class HarddiskManager:
 										successfully = True
 										config.storage_options.default_device.value = uuid
 		if action == "mount_only":
+			print("mount only")
 			new_default = self.getPartitionbyUUID(uuid)
 			new_default_cfg = config.storage.get(uuid, None)
 			if new_default is not None:
+				print("new default")
 				new_default_dev = new_default.device
+				print("new default dev",new_default_dev)
 				new_default_newmp = self.suggestDeviceMountpath(uuid)
+				print("new default mp",new_default_newmp)
 				if new_default_cfg is not None:
+					print("new default cfg")
 					old_new_default_enabled = new_default_cfg["enabled"].value
 					old_new_default_mp = new_default_cfg["mountpoint"].value
 					#[oldmountpath, oldenable, newmountpath, newenable]
@@ -1380,6 +1397,7 @@ class HarddiskManager:
 							if tmppath is not None and tmppath == "/dev/disk/by-uuid/" + uuid:
 								self.unmountPartitionbyMountpoint(new_default_newmp)
 						x = None
+						print(new_default_dev)
 						if new_default_dev is not None:
 							x = self.getPartitionbyDevice(new_default_dev)
 						if x is None:
@@ -1387,6 +1405,7 @@ class HarddiskManager:
 						else:
 							self.storageDeviceChanged(uuid)
 						new_default = self.getPartitionbyUUID(uuid)
+						print(new_default,new_default_newmp,self.isMount(new_default_newmp))
 						if new_default is not None and path.exists(new_default_newmp) and self.isMount(new_default_newmp):
 							successfully = True
 							if uuid == currentDefaultStorageUUID:

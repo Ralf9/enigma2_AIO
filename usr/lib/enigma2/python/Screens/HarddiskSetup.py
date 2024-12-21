@@ -23,7 +23,7 @@ from Screens.VirtualKeyBoard import VirtualKeyBoard
 from Tools.Directories import resolveFilename, SCOPE_CURRENT_SKIN
 from Tools.LoadPixmap import LoadPixmap
 from Tools.BoundFunction import boundFunction
-from enigma import eTimer
+from enigma import eTimer, eConsoleAppContainer
 from os import path, makedirs, listdir, access, F_OK, R_OK
 import six
 
@@ -754,6 +754,13 @@ class HarddiskDriveSelection(Screen, HelpableScreen):
 
 		return((hdd_description, hd, device_info, numPartitions, isOfflineStorageDevice, isMountedPartition, currentMountpoint, devicepng, onlinepng, divpng, partitionNum, isReadable, partitionPath, partitionType, deviceName))
 
+	def isUnique(self,entry):
+		# check for unique device after reset to avoid duplicates
+		for x in self.list:
+			if entry[0]==x[0] and entry[12]==x[12]:
+				return False
+		return True
+
 	def updateList(self):
 		self.view = self.VIEW_HARDDISK
 		self.selectedHDD = None
@@ -761,13 +768,16 @@ class HarddiskDriveSelection(Screen, HelpableScreen):
 
 		for hd in harddiskmanager.hdd:
 			if not hd.isRemovable:
-				self.list.append(self.buildHDDList(hd, isOfflineStorage = False)) #online hard disk devices discovered
+				entry=self.buildHDDList(hd, isOfflineStorage = False) #online hard disk devices discovered
+				if self.isUnique(entry):
+					self.list.append(entry)
 		for hd in harddiskmanager.hdd:
 			if hd.isRemovable:
-				self.list.append(self.buildHDDList(hd, isOfflineStorage = False)) #online removable devices discovered
+				entry=self.buildHDDList(hd, isOfflineStorage = False) #online removable devices discovered
+				if self.isUnique(entry):
+					self.list.append(entry)
 		if self.list:
 			self.list.sort(key=lambda x: x[14][:3])
-
 		for uuid in config.storage:
 			dev = harddiskmanager.getDeviceNamebyUUID(uuid)
 			if dev is None:
@@ -789,9 +799,13 @@ class HarddiskDriveSelection(Screen, HelpableScreen):
 		self.selectedHDD = hdd
 		self.list = []
 		for p in harddiskmanager.partitions[:]:
-			if p.device is not None:
-				if p.device.startswith(hdd.device) and p.device[3:].isdigit():
-					self.list.append(self.buildHDDList(hdd, isOfflineStorage = False, partNum = p.device[3:])) #online devices partition discovered
+			if p.device is not None and p.device.startswith(hdd.device):
+				partNumPos = len(hdd.device)
+				print("=== p.device", p.device[partNumPos:], p.device, hdd.device)
+				if p.device[partNumPos:].startswith("p"):
+					partNumPos += 1
+				if p.device[partNumPos:].isdigit():
+					self.list.append(self.buildHDDList(hdd, isOfflineStorage = False, partNum = p.device[partNumPos:])) #online devices partition discovered
 		if self.list:
 			self.list.sort(key=lambda x: x[14][3:])
 
@@ -832,9 +846,11 @@ class HarddiskDriveSelection(Screen, HelpableScreen):
 			offline = current[4]
 			if numpart >= 0 and not offline:
 				storage_plugins = plugins.getPlugins(PluginDescriptor.WHERE_STORAGEMANAGER)
+				self["YellowColorActions"].setEnabled(True)
 				if len(storage_plugins):
-					self["YellowColorActions"].setEnabled(True)
 					self["key_yellow"].setText(plugins_btntxt)
+				elif self.view == self.VIEW_HARDDISK:
+					self["key_yellow"].setText(_("Reset"))
 				if config.usage.setup_level.index >= 1:
 					self["key_blue"].setText(settings_btntxt)
 					self["BlueColorActions"].setEnabled(True)
@@ -933,6 +949,32 @@ class HarddiskDriveSelection(Screen, HelpableScreen):
 			self.mainMenuClosed()
 		else:
 			self.close()
+
+	def confirmReset(self, answer, selection):
+		if answer and selection:
+			print("=== confirmed reset device", selection[1].dev_path)
+			message = _("This DVD RW medium is already formatted - reformatting will erase all content on the disc.").replace("DVD RW","")
+			#use hddConfirmed to unmount and delete fstab entry
+			self.session.openWithCallback(lambda x : hddConfirmed(x, HARDDISK_INITIALIZE, selection[1], None, self.doResetDevice), MessageBox, message, default=False)
+		else:
+			print("not confirmed reset device")
+		return
+		
+	def doResetDevice(self, stype, hdd, partition ):
+		if stype == HARDDISK_INITIALIZE and hdd:
+			self.container = eConsoleAppContainer()
+			self.appClosed_conn = self.container.appClosed.connect(self.consoleFinished)
+			cmd = "sfdisk --delete %s" % hdd.dev_path
+			print("=== doResetDevice cmd: '%s', device-path: '%s'" % (cmd, hdd.dev_path))
+			self.container.execute(cmd)
+
+	def consoleFinished(self, data):
+		if data == 0:
+			message = _("Removed successfully.")
+			self.session.openWithCallback(lambda x : self.updateList(), MessageBox, message, MessageBox.TYPE_INFO, timeout = 10)
+		else:
+			message = _("Write failed!")
+			self.session.open(MessageBox, message, MessageBox.TYPE_INFO, timeout = 10)
 
 	def handleAnswer(self, answer, selection):
 		self.devicedescription = storagedevice_description
@@ -1295,6 +1337,10 @@ class HarddiskDriveSelection(Screen, HelpableScreen):
 					for p in storage_plugins:
 						pluginlist.append( (p.name, p) )
 					self.session.openWithCallback(lambda x : self.onStoragePluginSelected(x, selection),  ChoiceBox, title=_("Please select a storage device plugin"), list = pluginlist)
+				elif self.view == self.VIEW_HARDDISK:
+					self.label =  "%(desc)s '%(name)s'" % {"desc": self.devicedescription.get('desc'), "name": selection[1].model()}
+					message = _("Reset")+"?\n\n"+ self.label
+					self.session.openWithCallback(lambda x : self.confirmReset(x, selection), MessageBox, message, MessageBox.TYPE_YESNO, timeout = 20, default = False)
 
 	def onStoragePluginSelected(self, p, selection):
 		p = p and p[1]
