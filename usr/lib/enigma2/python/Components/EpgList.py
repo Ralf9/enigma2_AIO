@@ -16,6 +16,8 @@ from Tools.Directories import resolveFilename, SCOPE_CURRENT_SKIN
 
 from skin import TemplatedListFonts, componentSizes
 
+from calendar import day_abbr as calendar_short_weekdays
+
 EPG_TYPE_SINGLE = 0
 EPG_TYPE_MULTI = 1
 EPG_TYPE_SIMILAR = 2
@@ -48,7 +50,9 @@ class EPGList(HTMLComponent, GUIComponent):
 	SKIN_COMPONENT_PROGRESS_HEIGHT = "progressHeight"
 
 	def __init__(self, type=EPG_TYPE_SINGLE, selChangedCB=None, timer = None):
-		self.days = (_("Mon"), _("Tue"), _("Wed"), _("Thu"), _("Fri"), _("Sat"), _("Sun"))
+		#self.days = (_("Mon"), _("Tue"), _("Wed"), _("Thu"), _("Fri"), _("Sat"), _("Sun"))
+		self.days = list(calendar_short_weekdays)
+		
 		self.timer = timer
 		self.onSelChanged = [ ]
 		if selChangedCB is not None:
