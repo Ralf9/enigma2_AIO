@@ -142,7 +142,7 @@ class ServiceInfo(Converter, object):
 				"Framerate": (self.FRAMERATE, (iPlayableService.evVideoSizeChanged, iPlayableService.evVideoFramerateChanged)),
 				"TransferBPS": (self.TRANSFERBPS, (iPlayableService.evUpdatedInfo,)),
 				"HasSubtitles": (self.HAS_SUBTITLES, (iPlayableService.evUpdatedInfo, iPlayableService.evSubtitleListChanged)),
-				"IsStream": (self.IS_STREAM, (iPlayableService.evUpdatedInfo,)),
+				"IsStream": (self.IS_STREAM, (iPlayableService.evUpdatedInfo,iPlayableService.evStart)),
 				"Frequency": (self.FREQUENCY, (iPlayableService.evStart,)),
 				"Modulation": (self.MODULATION, (iPlayableService.evStart,)),
 				"TunerType": (self.TUNERTYPE, (iPlayableService.evStart,)),
