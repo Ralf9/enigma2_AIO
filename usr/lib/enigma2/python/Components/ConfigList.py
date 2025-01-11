@@ -211,8 +211,7 @@ class ConfigListScreen(object):
 
 	def handleInputHelpers(self):
 		configElement = self["config"].getCurrent() and self["config"].getCurrent()[1]
-		if configElement:
-			if isinstance(configElement, (ConfigText, ConfigPassword)) and not isinstance(configElement, ConfigNumber):
+		if configElement and isinstance(configElement, (ConfigText, ConfigPassword)) and not isinstance(configElement, ConfigNumber):
 				self["VirtualKB"].setEnabled(True)
 				if "VKeyIcon" in self:
 					self["VKeyIcon"].boolean = True
@@ -226,11 +225,12 @@ class ConfigListScreen(object):
 				self["VKeyIcon"].boolean = False
 
 	def KeyText(self):
+		txt = self["config"].getCurrent()[1].getValue()
 		helpwin = self._getHelpWindow()
 		if helpwin:
 			helpwin.hide()
 		from Screens.VirtualKeyBoard import VirtualKeyBoard
-		self.session.openWithCallback(self.VirtualKeyBoardCallback, VirtualKeyBoard, title = self["config"].getCurrent()[0], text = self["config"].getCurrent()[1].getValue())
+		self.session.openWithCallback(self.VirtualKeyBoardCallback, VirtualKeyBoard, title = self["config"].getCurrent()[0], text = txt)
 
 	def VirtualKeyBoardCallback(self, callback = None):
 		helpwin = self._getHelpWindow()
